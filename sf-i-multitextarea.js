@@ -10,9 +10,11 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
     return c > 3 && r && Object.defineProperty(target, key, r), r;
 };
 import { LitElement, html, css } from 'lit';
-import { customElement, query, property } from 'lit/decorators.js';
+// import {customElement, query, queryAssignedElements, property} from 'lit/decorators.js';
+// import {customElement, query, queryAssignedElements, property} from 'lit/decorators.js';
+import { customElement, property, query } from 'lit/decorators.js';
 // import {customElement, query, property} from 'lit/decorators.js';
-import Util from './util';
+// import Util from './util';
 // import {LitElement, html, css} from 'lit';
 // import {customElement} from 'lit/decorators.js';
 /*
@@ -35,32 +37,98 @@ DB: partitionKey, rangeKey, values
 let SfIMultitextarea = class SfIMultitextarea extends LitElement {
     constructor() {
         super();
-        this.flow = "";
-        this.prepareXhr = async (data, url, loaderElement, authorization) => {
-            if (loaderElement != null) {
-                loaderElement.innerHTML = '<div class="lds-dual-ring"></div>';
+        this.SCROLL_POS = 0;
+        this.showFields = 3;
+        this.getFields = () => {
+            return JSON.parse(this.fields);
+        };
+        this.getValues = () => {
+            try {
+                return JSON.parse(this.values);
             }
-            return await Util.callApi(url, data, authorization);
+            catch (e) {
+                let retValue = {};
+                for (var i = 0; i < this.getFields().length; i++) {
+                    retValue[this.getFields()[i]] = this.values;
+                }
+                return retValue;
+            }
         };
-        this.clearMessages = () => {
-            this._SfRowError.style.display = 'none';
-            this._SfRowErrorMessage.innerHTML = '';
-            this._SfRowSuccess.style.display = 'none';
-            this._SfRowSuccessMessage.innerHTML = '';
+        this.flow = "";
+        this.getFieldsHtml = () => {
+            var html = '';
+            const jsonFields = this.getFields();
+            html += '<div class="d-flex align-center">';
+            if ((this.SCROLL_POS) > 0) {
+                html += '<button part="multitextarea-prev" class="multitextarea-prev"><span class="material-symbols-outlined">chevron_left</span></button>';
+            }
+            var pos = 0;
+            for (var i = this.SCROLL_POS; (i < jsonFields.length) && ((i - this.SCROLL_POS) < this.showFields); i++) {
+                html += '<div part="multitextarea-container" class="' + ((pos === 0) ? 'ml-5' : '') + ' ' + ((pos === (this.showFields - 1)) ? 'mr-5' : '') + ' ' + ((pos != (this.showFields - 1) && pos != (0)) ? 'ml-5 mr-5' : '') + '">';
+                html += '<label part="multitextarea-label" class="unfocused-label multitextarea-label multitextarea-label-' + i + '">' + jsonFields[i] + '</label>';
+                html += '<textarea type="text" part="multitextarea-input" class="unfocused multitextarea-input multitextarea-input-' + i + '" >' + (this.getValues() == null ? '' : this.getValues()[jsonFields[i]] == null ? '' : this.getValues()[jsonFields[i]]) + '</textarea>';
+                html += '</div>';
+                pos++;
+            }
+            if ((this.SCROLL_POS + this.showFields) < this.getFields().length) {
+                html += '<button part="multitextarea-next" class="multitextarea-next"><span class="material-symbols-outlined">chevron_right</span></button>';
+            }
+            html += '</div>';
+            return html;
         };
-        this.setError = (msg) => {
-            this._SfRowError.style.display = 'flex';
-            this._SfRowErrorMessage.innerHTML = msg;
-            this._SfRowSuccess.style.display = 'none';
-            this._SfRowSuccessMessage.innerHTML = '';
+        this.loadFieldsHtml = () => {
+            this._SfMultitextareaX.innerHTML = this.getFieldsHtml();
         };
-        this.setSuccess = (msg) => {
-            this._SfRowError.style.display = 'none';
-            this._SfRowErrorMessage.innerHTML = '';
-            this._SfRowSuccess.style.display = 'flex';
-            this._SfRowSuccessMessage.innerHTML = msg;
+        this.initListeners = () => {
+            const inputs = this._SfMultitextareaX.querySelectorAll('textarea');
+            for (var i = 0; i < inputs.length; i++) {
+                inputs[i].addEventListener('focus', (e) => {
+                    var _a;
+                    console.log(e.target);
+                    const input = e.target;
+                    const label = (_a = input.parentElement) === null || _a === void 0 ? void 0 : _a.firstChild;
+                    input.classList.remove('unfocused');
+                    input.classList.add('focused');
+                    label.classList.remove('unfocused-label');
+                    label.classList.add('focused-label');
+                });
+                inputs[i].addEventListener('focusout', (e) => {
+                    var _a;
+                    console.log(e.target);
+                    const input = e.target;
+                    const label = (_a = input.parentElement) === null || _a === void 0 ? void 0 : _a.firstChild;
+                    input.classList.remove('focused');
+                    input.classList.add('unfocused');
+                    label.classList.remove('focused-label');
+                    label.classList.add('unfocused-label');
+                });
+            }
+            const buttonPrev = this._SfMultitextareaX.querySelector('.multitextarea-prev');
+            buttonPrev === null || buttonPrev === void 0 ? void 0 : buttonPrev.addEventListener('click', () => {
+                for (var i = 0; i < this.showFields; i++) {
+                    if (this.SCROLL_POS > 0) {
+                        this.SCROLL_POS--;
+                    }
+                }
+                console.log('SCROLL_POS', this.SCROLL_POS);
+                this.loadFieldsHtml();
+                this.initListeners();
+            });
+            const buttonNext = this._SfMultitextareaX.querySelector('.multitextarea-next');
+            buttonNext === null || buttonNext === void 0 ? void 0 : buttonNext.addEventListener('click', () => {
+                for (var i = 0; i < this.showFields; i++) {
+                    if (this.SCROLL_POS < (this.getFields().length - 1)) {
+                        this.SCROLL_POS++;
+                    }
+                }
+                console.log('SCROLL_POS', this.SCROLL_POS);
+                this.loadFieldsHtml();
+                this.initListeners();
+            });
         };
         this.loadMode = async () => {
+            this.loadFieldsHtml();
+            this.initListeners();
         };
     }
     firstUpdated(_changedProperties) {
@@ -73,21 +141,19 @@ let SfIMultitextarea = class SfIMultitextarea extends LitElement {
         return html `
           
       <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
       <div class="SfIMultitextareaC">
-        <label part="input-label">Hello</label>
+        
       </div>
 
     `;
     }
 };
 SfIMultitextarea.styles = css `
-
     
     .SfIMultitextareaC {
       display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: space-between;
+      align-items: center;
     }
 
     .flex-grow {
@@ -106,6 +172,30 @@ SfIMultitextarea.styles = css `
 
     .gone {
       display: none
+    }
+
+    .unfocused {
+      width: 40px;
+      font-size: 70%;
+    }
+
+    .unfocused-label {
+      display: block;
+      width: 40px;
+      font-size: 80%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-transform: capitalize;
+    }
+
+    .focused {
+      width: 150px;
+    }
+
+    .focused-label {
+      display: block;
+      width: 100px;
+      text-transform: capitalize;
     }
 
     .loader-element {
@@ -283,28 +373,30 @@ SfIMultitextarea.styles = css `
 
     }
 
+    .ml-5 {
+      margin-left: 5px;
+    }
+
+    .mr-5 {
+      margin-right: 5px;
+    }
+
   `;
 __decorate([
+    query('.SfIMultitextareaC')
+], SfIMultitextarea.prototype, "_SfMultitextareaX", void 0);
+__decorate([
     property()
-], SfIMultitextarea.prototype, "mode", void 0);
+], SfIMultitextarea.prototype, "showFields", void 0);
+__decorate([
+    property()
+], SfIMultitextarea.prototype, "fields", void 0);
+__decorate([
+    property()
+], SfIMultitextarea.prototype, "values", void 0);
 __decorate([
     property()
 ], SfIMultitextarea.prototype, "flow", void 0);
-__decorate([
-    query('.div-row-error')
-], SfIMultitextarea.prototype, "_SfRowError", void 0);
-__decorate([
-    query('.div-row-error-message')
-], SfIMultitextarea.prototype, "_SfRowErrorMessage", void 0);
-__decorate([
-    query('.div-row-success')
-], SfIMultitextarea.prototype, "_SfRowSuccess", void 0);
-__decorate([
-    query('.div-row-success-message')
-], SfIMultitextarea.prototype, "_SfRowSuccessMessage", void 0);
-__decorate([
-    query('.loader-element')
-], SfIMultitextarea.prototype, "_SfLoader", void 0);
 SfIMultitextarea = __decorate([
     customElement('sf-i-multitextarea')
 ], SfIMultitextarea);

@@ -5,11 +5,11 @@
  */
 
 import {LitElement, html, css, PropertyValueMap} from 'lit';
-import {customElement, query, queryAssignedElements, property} from 'lit/decorators.js';
-import {SfISelect} from 'sf-i-select';
-import {SfISubSelect} from 'sf-i-sub-select';
+// import {customElement, query, queryAssignedElements, property} from 'lit/decorators.js';
+// import {customElement, query, queryAssignedElements, property} from 'lit/decorators.js';
+import {customElement, property, query} from 'lit/decorators.js';
 // import {customElement, query, property} from 'lit/decorators.js';
-import Util from './util';
+// import Util from './util';
 // import {LitElement, html, css} from 'lit';
 // import {customElement} from 'lit/decorators.js';
 
@@ -34,21 +34,49 @@ DB: partitionKey, rangeKey, values
  */
 @customElement('sf-i-multitextarea')
 export class SfIMultitextarea extends LitElement {
+
+  SCROLL_POS = 0;
+
+  @query('.SfIMultitextareaC')
+  _SfMultitextareaX: any;
   
   @property()
-  mode!: string;
+  showFields: number = 3;
+
+  @property()
+  fields!: string;
+
+  getFields = () => {
+    return JSON.parse(this.fields);
+  }
+
+  @property()
+  values!: string;
+
+  getValues = () => {
+    try {
+      return JSON.parse(this.values);
+    } catch (e: any) {
+
+      let retValue: any = {};
+
+      for(var i = 0; i < this.getFields().length; i++) {
+        retValue[this.getFields()[i]] = this.values;
+      }
+
+      return retValue;
+
+    }
+  }
 
   @property()
   flow: string = "";
 
   static override styles = css`
-
     
     .SfIMultitextareaC {
       display: flex;
-      flex-direction: column;
-      align-items: stretch;
-      justify-content: space-between;
+      align-items: center;
     }
 
     .flex-grow {
@@ -67,6 +95,30 @@ export class SfIMultitextarea extends LitElement {
 
     .gone {
       display: none
+    }
+
+    .unfocused {
+      width: 40px;
+      font-size: 70%;
+    }
+
+    .unfocused-label {
+      display: block;
+      width: 40px;
+      font-size: 80%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-transform: capitalize;
+    }
+
+    .focused {
+      width: 150px;
+    }
+
+    .focused-label {
+      display: block;
+      width: 100px;
+      text-transform: capitalize;
     }
 
     .loader-element {
@@ -244,56 +296,127 @@ export class SfIMultitextarea extends LitElement {
 
     }
 
+    .ml-5 {
+      margin-left: 5px;
+    }
+
+    .mr-5 {
+      margin-right: 5px;
+    }
+
   `;
 
-  @query('.div-row-error')
-  _SfRowError: any;
-
-  @query('.div-row-error-message')
-  _SfRowErrorMessage: any;
-
-  @query('.div-row-success')
-  _SfRowSuccess: any;
-
-  @query('.div-row-success-message')
-  _SfRowSuccessMessage: any;
-
-  @query('.loader-element')
-  _SfLoader: any;
-
-
-  prepareXhr = async (data: any, url: string, loaderElement: any, authorization: any) => {
-
+  getFieldsHtml = () => {
     
-    if(loaderElement != null) {
-      loaderElement.innerHTML = '<div class="lds-dual-ring"></div>';
+    var html = '';
+    const jsonFields = this.getFields();
+
+    html += '<div class="d-flex align-center">';
+
+    if((this.SCROLL_POS) > 0) {
+      html += '<button part="multitextarea-prev" class="multitextarea-prev"><span class="material-symbols-outlined">chevron_left</span></button>';
     }
-    return await Util.callApi(url, data, authorization);
+
+    var pos = 0;
+
+    for(var i = this.SCROLL_POS; (i < jsonFields.length) && ((i - this.SCROLL_POS) < this.showFields); i++) {
+
+      html += '<div part="multitextarea-container" class="'+((pos === 0) ? 'ml-5' : '')+' '+((pos === (this.showFields-1)) ? 'mr-5' : '')+' '+((pos != (this.showFields-1) && pos != (0)) ? 'ml-5 mr-5' : '')+'">';
+      html += '<label part="multitextarea-label" class="unfocused-label multitextarea-label multitextarea-label-'+i+'">'+jsonFields[i]+'</label>';
+      html += '<textarea type="text" part="multitextarea-input" class="unfocused multitextarea-input multitextarea-input-'+i+'" >'+(this.getValues() == null ? '' : this.getValues()[jsonFields[i]] == null ? '' : this.getValues()[jsonFields[i]])+'</textarea>';
+      html += '</div>';
+
+      pos++;
+
+    }
+    if((this.SCROLL_POS + this.showFields) < this.getFields().length) {
+      html += '<button part="multitextarea-next" class="multitextarea-next"><span class="material-symbols-outlined">chevron_right</span></button>';
+    }
+
+    html += '</div>';
+    return html;
+      
+  }
+
+  loadFieldsHtml = () => {
+
+    this._SfMultitextareaX.innerHTML = this.getFieldsHtml();
 
   }
 
-  clearMessages = () => {
-    this._SfRowError.style.display = 'none';
-    this._SfRowErrorMessage.innerHTML = '';
-    this._SfRowSuccess.style.display = 'none';
-    this._SfRowSuccessMessage.innerHTML = '';
-  }
+  initListeners = () => {
 
-  setError = (msg: string) => {
-    this._SfRowError.style.display = 'flex';
-    this._SfRowErrorMessage.innerHTML = msg;
-    this._SfRowSuccess.style.display = 'none';
-    this._SfRowSuccessMessage.innerHTML = '';
-  }
+    const inputs = this._SfMultitextareaX.querySelectorAll('textarea');
 
-  setSuccess = (msg: string) => {
-    this._SfRowError.style.display = 'none';
-    this._SfRowErrorMessage.innerHTML = '';
-    this._SfRowSuccess.style.display = 'flex';
-    this._SfRowSuccessMessage.innerHTML = msg;
+    for(var i = 0; i < inputs.length; i++) {
+
+      (inputs[i] as HTMLTextAreaElement).addEventListener('focus', (e: any) => {
+
+        console.log(e.target);
+        const input = e.target as HTMLInputElement;
+        const label = input.parentElement?.firstChild as HTMLLabelElement;
+
+        input.classList.remove('unfocused');
+        input.classList.add('focused');
+
+        label.classList.remove('unfocused-label');
+        label.classList.add('focused-label');
+        
+
+      });
+
+      (inputs[i] as HTMLTextAreaElement).addEventListener('focusout', (e: any) => {
+
+        console.log(e.target);
+        const input = e.target as HTMLInputElement;
+        const label = input.parentElement?.firstChild as HTMLLabelElement;
+
+        input.classList.remove('focused');
+        input.classList.add('unfocused');
+        
+        label.classList.remove('focused-label');
+        label.classList.add('unfocused-label');
+
+      });
+
+    }
+
+    const buttonPrev = this._SfMultitextareaX.querySelector('.multitextarea-prev') as HTMLButtonElement;
+    buttonPrev?.addEventListener('click', () => {
+
+      for(var i = 0; i < this.showFields; i++) {
+        if(this.SCROLL_POS > 0) {
+          this.SCROLL_POS--;
+        }
+      }
+
+      console.log('SCROLL_POS', this.SCROLL_POS);
+
+      this.loadFieldsHtml();
+      this.initListeners();
+    })
+
+    const buttonNext = this._SfMultitextareaX.querySelector('.multitextarea-next') as HTMLButtonElement;
+    buttonNext?.addEventListener('click', () => {
+
+      for(var i = 0; i < this.showFields; i++) {
+        if(this.SCROLL_POS < (this.getFields().length - 1)) {
+          this.SCROLL_POS++;
+        }
+      }
+
+      console.log('SCROLL_POS', this.SCROLL_POS);
+
+      this.loadFieldsHtml();
+      this.initListeners();
+    })
+
   }
 
   loadMode = async () => {
+
+    this.loadFieldsHtml();
+    this.initListeners();
 
   }
 
@@ -316,8 +439,9 @@ export class SfIMultitextarea extends LitElement {
     return html`
           
       <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" />
       <div class="SfIMultitextareaC">
-        <label part="input-label">Hello</label>
+        
       </div>
 
     `;

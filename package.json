@@ -1,8 +1,8 @@
 {
   "name": "sf-i-multitextarea",
   "private": false,
-  "version": "1.0.21",
-  "description": "Superflows Navigation Component",
+  "version": "1.0.3",
+  "description": "Superflows Multi Text Area",
   "main": "sf-i-multitextarea.js",
   "module": "sf-i-multitextarea.js",
   "type": "module",
@@ -53,8 +53,6 @@
   "dependencies": {
     "fs": "^0.0.1-security",
     "lit": "^2.2.4",
-    "sf-i-select": "^1.0.51",
-    "sf-i-sub-select": "^1.0.68",
     "sinon": "^15.0.1"
   },
   "devDependencies": {
